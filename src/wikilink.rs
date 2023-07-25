@@ -3,8 +3,8 @@ use std::fmt::Display;
 
 #[derive(Clone, PartialEq, Debug, Default)]
 pub struct Wikilink {
-    target: String,
-    label: Option<String>,
+    pub target: String,
+    pub label: Option<String>,
 }
 
 impl Wikilink {

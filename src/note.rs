@@ -46,8 +46,13 @@ impl Note {
     }
 
     pub fn from_file<P: AsRef<Path>>(path: &P) -> Result<Note, NoteError> {
+        let title = path
+            .as_ref()
+            .file_stem()
+            .ok_or(NoteError::NoFileName)?
+            .to_string_lossy();
         let content = std::fs::read_to_string(path)?;
-        Note::parse("example", &content)
+        Note::parse(&title, &content)
     }
 }
 
@@ -79,6 +84,9 @@ pub enum NoteError {
     // FrontMatterInvalidType(),
     #[error("frontmatter value error")]
     MetadataValueError(#[from] MetadataError),
+
+    #[error("no file name")]
+    NoFileName,
 }
 
 #[cfg(test)]
