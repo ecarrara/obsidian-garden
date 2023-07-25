@@ -4,21 +4,32 @@ mod site;
 pub mod vault;
 pub mod wikilink;
 
+use clap::{command, Parser};
 use site::Site;
 use vault::VaultBuilder;
 
 fn main() {
-    let vault = VaultBuilder::new("./notes").build();
-    let site = Site::new(&vault, "./templates/default", "./_build");
+    let args = Args::parse();
 
-    for (path, item) in &vault.notes {
-        println!(
-            "{}\n   Title: {}\n   Links: {:?}",
-            path, &item.note.title, &item.note.links
-        );
+    let vault = VaultBuilder::new(&args.vault).build();
+    let site = Site::new(&vault, &args.template, &args.output_directory);
 
+    for path in vault.notes.keys() {
+        println!("{}", path);
         site.render_note(path).unwrap();
     }
+}
 
-    vault.dot_graph();
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// Vault directory.
+    vault: String,
+
+    /// Output directory.
+    output_directory: String,
+
+    /// Template directory.
+    #[arg(short, long, default_value = "templates/default")]
+    template: String,
 }
