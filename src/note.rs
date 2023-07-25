@@ -1,4 +1,5 @@
 use pulldown_cmark::Event;
+use serde::Serialize;
 use std::path::Path;
 use thiserror::Error;
 
@@ -7,7 +8,7 @@ use crate::{
     wikilink::{Wikilink, WikilinkParser},
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Note {
     pub title: String,
     pub content: String,
@@ -53,6 +54,13 @@ impl Note {
             .to_string_lossy();
         let content = std::fs::read_to_string(path)?;
         Note::parse(&title, &content)
+    }
+
+    pub fn render_html(&self) -> String {
+        let mut html_buf = String::new();
+        let parser = pulldown_cmark::Parser::new_ext(&self.content, pulldown_cmark::Options::all());
+        pulldown_cmark::html::push_html(&mut html_buf, parser);
+        html_buf
     }
 }
 

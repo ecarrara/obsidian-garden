@@ -1,7 +1,8 @@
+use serde::Serialize;
 use std::collections::HashMap;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Metadata {
     inner: HashMap<String, MetadataValue>,
 }
@@ -34,7 +35,7 @@ impl From<HashMap<String, MetadataValue>> for Metadata {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub enum MetadataValue {
     Boolean(bool),
     List(Vec<MetadataValue>),

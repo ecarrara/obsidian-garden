@@ -6,7 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-petgraph = { version = "0.6.3" }
+minijinja = { version = "1.0.5", features = ["json", "loader"] }
+petgraph = { version = "0.6.3", features = ["serde-1"] }
 pulldown-cmark = "0.9.3"
 serde = { version = "1.0.173", features = ["derive"] }
 serde_yaml = "0.9.25"

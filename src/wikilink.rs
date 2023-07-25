@@ -1,7 +1,8 @@
 use pulldown_cmark::CowStr;
+use serde::Serialize;
 use std::fmt::Display;
 
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, PartialEq, Debug, Default, Serialize)]
 pub struct Wikilink {
     pub target: String,
     pub label: Option<String>,

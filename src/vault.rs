@@ -2,6 +2,7 @@ use petgraph::{
     dot::Dot,
     prelude::{NodeIndex, StableGraph},
 };
+use serde::Serialize;
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -78,6 +79,10 @@ impl Vault {
         let dot = Dot::new(&self.graph);
         println!("{:?}", dot);
     }
+
+    pub(crate) fn get_note(&self, note_path: &NotePath) -> Option<&Note> {
+        self.notes.get(note_path).map(|item| &item.note)
+    }
 }
 
 /// A `Note` in a `Vault`.
@@ -86,14 +91,23 @@ pub(crate) struct NoteItem {
     index: NodeIndex,
 }
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone)]
+#[derive(Hash, Eq, PartialEq, PartialOrd, Ord, Debug, Clone)]
 pub(crate) struct NotePath {
-    path: String,
+    pub path: Vec<String>,
+}
+
+impl Serialize for NotePath {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.path.join("/"))
+    }
 }
 
 impl Display for NotePath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.path)
+        f.write_str(&self.path.join("/"))
     }
 }
 
@@ -109,14 +123,14 @@ impl From<&Path> for NotePath {
         let title = value.file_stem().unwrap().to_string_lossy().to_string();
         path.push(title);
 
-        NotePath {
-            path: path.join("/"),
-        }
+        NotePath { path }
     }
 }
 
 impl From<String> for NotePath {
     fn from(value: String) -> Self {
-        Self { path: value }
+        Self {
+            path: value.split('/').map(|v| v.to_string()).collect(),
+        }
     }
 }
