@@ -11,7 +11,12 @@ use vault::VaultBuilder;
 fn main() {
     let args = Args::parse();
 
-    let vault = VaultBuilder::new(&args.vault).build();
+    let mut vault_builder = VaultBuilder::new(&args.vault);
+    if let Some(tags) = args.tags {
+        vault_builder.filter_tags(tags);
+    }
+
+    let vault = vault_builder.build();
     let site = Site::new(&vault, &args.template, &args.output_directory);
 
     for path in vault.notes.keys() {
@@ -30,6 +35,9 @@ struct Args {
     output_directory: String,
 
     /// Template directory.
-    #[arg(short, long, default_value = "templates/default")]
+    #[arg(long, default_value = "templates/default")]
     template: String,
+
+    #[arg(short, long)]
+    tags: Option<Vec<String>>,
 }

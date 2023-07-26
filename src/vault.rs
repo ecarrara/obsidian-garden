@@ -15,12 +15,14 @@ use crate::note::Note;
 
 pub(crate) struct VaultBuilder {
     pub directory: PathBuf,
+    tags: Option<Vec<String>>,
 }
 
 impl VaultBuilder {
     pub fn new<P: AsRef<Path>>(directory: P) -> Self {
         Self {
             directory: directory.as_ref().to_path_buf(),
+            tags: None,
         }
     }
 
@@ -41,6 +43,12 @@ impl VaultBuilder {
 
                     match Note::from_file(&entry.path()) {
                         Ok(note) => {
+                            if let Some(tags) = &self.tags {
+                                if !note.tags.iter().any(|t| tags.contains(t)) {
+                                    continue;
+                                }
+                            }
+
                             let note_path =
                                 NotePath::from(entry.path().strip_prefix(&self.directory).unwrap());
                             let index = graph.add_node(note_path.clone());
@@ -66,6 +74,11 @@ impl VaultBuilder {
         }
 
         Vault { notes, graph }
+    }
+
+    pub(crate) fn filter_tags(&mut self, tags: Vec<String>) -> &mut Self {
+        self.tags = Some(tags);
+        self
     }
 }
 
