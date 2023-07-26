@@ -69,7 +69,10 @@ impl WikilinkParser {
                 self.transit_state(WikilinkParserState::Start);
                 self.current_value.clone()
             }
-            _ => None,
+            _ => {
+                self.transit_state(WikilinkParserState::Start);
+                None
+            }
         }
     }
 
@@ -96,9 +99,9 @@ enum WikilinkParserState {
 
 #[cfg(test)]
 mod tests {
-    use pulldown_cmark::CowStr;
-
     use super::{Wikilink, WikilinkParser};
+    use crate::wikilink::WikilinkParserState;
+    use pulldown_cmark::CowStr;
 
     #[test]
     fn test_parse_wikilink() {
@@ -124,5 +127,16 @@ mod tests {
             parser.feed(&CowStr::Borrowed("]")),
             Some(Wikilink::new("Page One", Some("Label 1")))
         );
+    }
+
+    #[test]
+    fn test_parse_wikilink_reset_state_if_an_unexpected_token_is_found() {
+        let mut parser = WikilinkParser::new();
+        assert_eq!(parser.feed(&CowStr::Borrowed("[")), None,);
+        assert_eq!(parser.feed(&CowStr::Borrowed("[")), None,);
+        assert_eq!(parser.feed(&CowStr::Borrowed("Page One|Label 1")), None,);
+        assert_eq!(parser.feed(&CowStr::Borrowed("]")), None,);
+        assert_eq!(parser.feed(&CowStr::Borrowed(" Oops")), None);
+        assert!(matches!(parser.state, WikilinkParserState::Start));
     }
 }
