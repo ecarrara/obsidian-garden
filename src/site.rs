@@ -47,11 +47,13 @@ impl<'a> Site<'a> {
             .unwrap();
 
         for wikilink in note.links.iter() {
-            let label = wikilink.label.as_ref().unwrap_or(&wikilink.target);
-            let href = format!("/{}.html", &wikilink.target);
-            let a_tag =
-                format!("<a href=\"{href}\" title=\"{label}\" class=\"wikilink\">{label}</a>",);
-            html = html.replace(&format!("{wikilink}"), &a_tag);
+            if let Some(note_path) = self.vault.resolve_link(&wikilink.target) {
+                let label = wikilink.label.as_ref().unwrap_or(&wikilink.target);
+                let href = format!("/{}.html", &note_path);
+                let a_tag =
+                    format!("<a href=\"{href}\" title=\"{label}\" class=\"wikilink\">{label}</a>",);
+                html = html.replace(&format!("{wikilink}"), &a_tag);
+            }
         }
 
         Ok(html)

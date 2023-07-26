@@ -96,6 +96,34 @@ impl Vault {
     pub(crate) fn get_note(&self, note_path: &NotePath) -> Option<&Note> {
         self.notes.get(note_path).map(|item| &item.note)
     }
+
+    pub(crate) fn resolve_link<S: Into<String>>(&self, target: S) -> Option<NotePath> {
+        let target = NotePath::from(target.into());
+        match target {
+            NotePath::Absolute(_) => {
+                if self.notes.contains_key(&target) {
+                    Some(target)
+                } else {
+                    None
+                }
+            }
+            NotePath::FileName(filename) => {
+                for path in self.notes.keys() {
+                    match path {
+                        NotePath::Absolute(components) => {
+                            if let Some(item_filename) = components.last() {
+                                if *item_filename == filename {
+                                    return Some(path.clone());
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                None
+            }
+        }
+    }
 }
 
 /// A `Note` in a `Vault`.
@@ -105,8 +133,9 @@ pub(crate) struct NoteItem {
 }
 
 #[derive(Hash, Eq, PartialEq, PartialOrd, Ord, Debug, Clone)]
-pub(crate) struct NotePath {
-    pub path: Vec<String>,
+pub(crate) enum NotePath {
+    Absolute(Vec<String>),
+    FileName(String),
 }
 
 impl Serialize for NotePath {
@@ -114,13 +143,19 @@ impl Serialize for NotePath {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.path.join("/"))
+        match self {
+            NotePath::Absolute(components) => serializer.serialize_str(&components.join("/")),
+            NotePath::FileName(filename) => serializer.serialize_str(&filename),
+        }
     }
 }
 
 impl Display for NotePath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.path.join("/"))
+        match self {
+            NotePath::Absolute(components) => f.write_str(&components.join("/")),
+            NotePath::FileName(filename) => f.write_str(&filename),
+        }
     }
 }
 
@@ -136,14 +171,16 @@ impl From<&Path> for NotePath {
         let title = value.file_stem().unwrap().to_string_lossy().to_string();
         path.push(title);
 
-        NotePath { path }
+        NotePath::Absolute(path)
     }
 }
 
 impl From<String> for NotePath {
     fn from(value: String) -> Self {
-        Self {
-            path: value.split('/').map(|v| v.to_string()).collect(),
+        if value.contains("/") {
+            NotePath::Absolute(value.split('/').map(|v| v.to_string()).collect())
+        } else {
+            NotePath::FileName(value)
         }
     }
 }
