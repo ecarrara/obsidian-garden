@@ -41,9 +41,13 @@ impl<'a> Site<'a> {
         let page_tmpl = self.env.get_template("page.html")?;
 
         let mut html = page_tmpl
-            .render(
-                context! { note => note, path => path, note_html => note.render_html(), menu => self.menu }
-            )
+            .render(context! {
+                note => note,
+                path => path,
+                note_html => note.render_html(),
+                menu => self.menu,
+                graph => self.vault.local_graph(path, 2)
+            })
             .unwrap();
 
         for wikilink in note.links.iter() {

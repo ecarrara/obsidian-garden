@@ -1,10 +1,7 @@
-use petgraph::{
-    dot::Dot,
-    prelude::{NodeIndex, StableGraph},
-};
+use petgraph::prelude::{NodeIndex, StableGraph};
 use serde::Serialize;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet, VecDeque},
     fmt::Display,
     os::unix::prelude::OsStrExt,
     path::{Path, PathBuf},
@@ -65,10 +62,8 @@ impl VaultBuilder {
 
         for item in notes.values() {
             for link in item.note.links.iter() {
-                let note_path: NotePath = link.target.clone().into();
-
-                if let Some(found_item) = notes.get(&note_path) {
-                    graph.add_edge(item.index, found_item.index, ());
+                if let Some(found) = resolve_link(&notes, &link.target) {
+                    graph.add_edge(item.index, notes[&found].index, ());
                 }
             }
         }
@@ -88,41 +83,54 @@ pub(crate) struct Vault {
 }
 
 impl Vault {
-    pub(crate) fn dot_graph(&self) {
-        let dot = Dot::new(&self.graph);
-        println!("{:?}", dot);
-    }
-
     pub(crate) fn get_note(&self, note_path: &NotePath) -> Option<&Note> {
         self.notes.get(note_path).map(|item| &item.note)
     }
 
-    pub(crate) fn resolve_link<S: Into<String>>(&self, target: S) -> Option<NotePath> {
-        let target = NotePath::from(target.into());
-        match target {
-            NotePath::Absolute(_) => {
-                if self.notes.contains_key(&target) {
-                    Some(target)
-                } else {
-                    None
-                }
+    pub(crate) fn local_graph(
+        &self,
+        path: &NotePath,
+        max_depth: usize,
+    ) -> Option<StableGraph<NotePath, ()>> {
+        let mut depth = 0;
+        let mut stack = VecDeque::new();
+        let mut discovered: HashSet<NotePath> = HashSet::new();
+        let mut path_indexes: HashMap<NotePath, NodeIndex> = HashMap::new();
+
+        stack.push_back(path.clone());
+
+        let mut g = StableGraph::new();
+
+        while let Some(node) = stack.pop_front() {
+            if depth > max_depth || discovered.contains(&node) {
+                continue;
             }
-            NotePath::FileName(filename) => {
-                for path in self.notes.keys() {
-                    match path {
-                        NotePath::Absolute(components) => {
-                            if let Some(item_filename) = components.last() {
-                                if *item_filename == filename {
-                                    return Some(path.clone());
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                None
+
+            discovered.insert(node.clone());
+
+            let origin = *path_indexes
+                .entry(node.clone())
+                .or_insert_with(|| g.add_node(node.clone()));
+
+            for succ in self.graph.neighbors(self.notes[&node].index) {
+                let succ_path = &self.graph[succ];
+                stack.push_back(succ_path.clone());
+
+                let target = *path_indexes
+                    .entry(succ_path.clone())
+                    .or_insert_with(|| g.add_node(succ_path.clone()));
+
+                g.update_edge(origin, target, ());
             }
+
+            depth += 1;
         }
+
+        Some(g)
+    }
+
+    pub(crate) fn resolve_link<S: Into<String>>(&self, target: S) -> Option<NotePath> {
+        resolve_link(&self.notes, target)
     }
 }
 
@@ -181,6 +189,34 @@ impl From<String> for NotePath {
             NotePath::Absolute(value.split('/').map(|v| v.to_string()).collect())
         } else {
             NotePath::FileName(value)
+        }
+    }
+}
+
+pub(crate) fn resolve_link<S: Into<String>>(
+    notes: &HashMap<NotePath, NoteItem>,
+    target: S,
+) -> Option<NotePath> {
+    let target = NotePath::from(target.into());
+    match target {
+        NotePath::Absolute(_) => {
+            if notes.contains_key(&target) {
+                Some(target)
+            } else {
+                None
+            }
+        }
+        NotePath::FileName(filename) => {
+            for path in notes.keys() {
+                if let NotePath::Absolute(components) = path {
+                    if let Some(item_filename) = components.last() {
+                        if *item_filename == filename {
+                            return Some(path.clone());
+                        }
+                    }
+                }
+            }
+            None
         }
     }
 }
