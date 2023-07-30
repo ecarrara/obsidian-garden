@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.3.19", features = ["derive"] }
+fsync = "0.1.0"
 minijinja = { version = "1.0.5", features = ["json", "loader"] }
 petgraph = { version = "0.6.3", features = ["serde-1"] }
 pulldown-cmark = "0.9.3"
