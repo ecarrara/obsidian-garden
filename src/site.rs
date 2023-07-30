@@ -1,6 +1,10 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use minijinja::{context, path_loader, Environment};
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::vault::{NotePath, Vault};
@@ -9,7 +13,7 @@ pub(crate) struct Site<'a> {
     vault: &'a Vault,
     env: Environment<'a>,
     output_directory: PathBuf,
-    menu: Vec<(String, String)>,
+    menu: Menu,
 }
 
 impl<'a> Site<'a> {
@@ -17,18 +21,11 @@ impl<'a> Site<'a> {
         let mut env = Environment::new();
         env.set_loader(path_loader(template_dir));
 
-        let mut menu: Vec<(String, String)> = vault
-            .notes
-            .keys()
-            .map(|path| (format!("/{}.html", path), format!("{}", path)))
-            .collect();
-        menu.sort();
-
         Self {
             vault,
             env,
             output_directory: output_directory.as_ref().to_path_buf(),
-            menu,
+            menu: Site::build_menu(&vault),
         }
     }
 
@@ -74,6 +71,62 @@ impl<'a> Site<'a> {
 
         Ok(())
     }
+
+    fn build_menu(vault: &Vault) -> Menu {
+        let mut paths: Vec<NotePath> = vault.notes.keys().map(|p| p.clone()).collect();
+        paths.sort();
+
+        let mut menu: Menu = Menu::new();
+
+        for current_path in paths {
+            menu.add_path(&current_path);
+        }
+
+        menu
+    }
+}
+
+#[derive(Serialize)]
+struct Menu {
+    #[serde(flatten)]
+    items: HashMap<String, MenuItem>,
+}
+
+impl Menu {
+    fn new() -> Self {
+        Self {
+            items: HashMap::new(),
+        }
+    }
+
+    fn add_path(&mut self, path: &NotePath) {
+        if let NotePath::Absolute(components) = path {
+            let mut current_menu = self;
+            for component in &components[..components.len() - 1] {
+                let menu = current_menu
+                    .items
+                    .entry(component.clone())
+                    .or_insert(MenuItem::Folder(Menu::new()));
+                match menu {
+                    MenuItem::Page(_) => todo!(),
+                    MenuItem::Folder(menu) => current_menu = menu,
+                }
+            }
+
+            let filename = &components[components.len() - 1];
+            current_menu
+                .items
+                .entry(filename.clone())
+                .or_insert(MenuItem::Page(path.clone()));
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+enum MenuItem {
+    Page(NotePath),
+    Folder(Menu),
 }
 
 #[derive(Error, Debug)]
