@@ -1,0 +1,61 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-unknown-linux-gnu
+          override: true
+          default: true
+
+      - name: rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+
+      - name: rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
+  test:
+    runs-on: "${{ matrix.platform.os }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            toolchain: stable
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            toolchain: stable
+            target: x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.platform.toolchain }}
+          target: ${{ matrix.platform.target }}
+          override: true
+          default: true
+
+      - name: test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --target ${{ matrix.platform.target }}
