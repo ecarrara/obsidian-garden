@@ -37,12 +37,14 @@ impl<'a> Site<'a> {
             }
         };
 
+        let menu = Site::build_menu(vault);
+
         Ok(Self {
             vault,
             env,
             output_directory: output_directory.as_ref().to_path_buf(),
-            menu: Site::build_menu(&vault),
             context,
+            menu,
         })
     }
 
@@ -91,7 +93,7 @@ impl<'a> Site<'a> {
     }
 
     fn build_menu(vault: &Vault) -> Menu {
-        let mut paths: Vec<NotePath> = vault.notes.keys().map(|p| p.clone()).collect();
+        let mut paths: Vec<NotePath> = vault.notes.keys().cloned().collect();
         paths.sort();
 
         let mut menu: Menu = Menu::new();

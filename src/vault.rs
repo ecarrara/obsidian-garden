@@ -153,7 +153,7 @@ impl Serialize for NotePath {
     {
         match self {
             NotePath::Absolute(components) => serializer.serialize_str(&components.join("/")),
-            NotePath::FileName(filename) => serializer.serialize_str(&filename),
+            NotePath::FileName(filename) => serializer.serialize_str(filename),
         }
     }
 }
@@ -162,7 +162,7 @@ impl Display for NotePath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             NotePath::Absolute(components) => f.write_str(&components.join("/")),
-            NotePath::FileName(filename) => f.write_str(&filename),
+            NotePath::FileName(filename) => f.write_str(filename),
         }
     }
 }
@@ -185,7 +185,7 @@ impl From<&Path> for NotePath {
 
 impl From<String> for NotePath {
     fn from(value: String) -> Self {
-        if value.contains("/") {
+        if value.contains('/') {
             NotePath::Absolute(value.split('/').map(|v| v.to_string()).collect())
         } else {
             NotePath::FileName(value)
