@@ -18,20 +18,28 @@ fn main() {
     }
 
     let vault = vault_builder.build();
-    let site = Site::new(&vault, &args.template, &args.output_directory);
+    match Site::new(
+        &vault,
+        &args.template,
+        &args.output_directory,
+        &args.context,
+    ) {
+        Ok(site) => {
+            for path in vault.notes.keys() {
+                println!("{}", path);
+                site.render_note(path).unwrap();
+            }
 
-    for path in vault.notes.keys() {
-        println!("{}", path);
-        site.render_note(path).unwrap();
-    }
+            let mut source_static_dir = PathBuf::from(&args.template);
+            source_static_dir.push("_static");
+            let mut target_static_dir = PathBuf::from(&args.output_directory);
+            target_static_dir.push("_static");
 
-    let mut source_static_dir = PathBuf::from(&args.template);
-    source_static_dir.push("_static");
-    let mut target_static_dir = PathBuf::from(&args.output_directory);
-    target_static_dir.push("_static");
-
-    if let Err(err) = fsync::sync(source_static_dir, target_static_dir) {
-        eprintln!("failed to copy _static directory: {err}")
+            if let Err(err) = fsync::sync(source_static_dir, target_static_dir) {
+                eprintln!("failed to copy _static directory: {err:?}")
+            }
+        }
+        Err(err) => eprintln!("build failed: {err:?}"),
     }
 }
 
@@ -50,4 +58,7 @@ struct Args {
 
     #[arg(short, long)]
     tags: Option<Vec<String>>,
+
+    #[arg(long, default_value = "site.yaml")]
+    context: String,
 }

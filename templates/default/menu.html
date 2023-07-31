@@ -1,0 +1,5 @@
+<nav>
+  {%- for (href, title) in menu %}
+  <a href="{{ href | safe }}" title="{{ title }}">{{title}}</a>
+  {%- endfor %}
+</nav>

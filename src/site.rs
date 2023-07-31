@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fs::File,
     path::{Path, PathBuf},
 };
 
@@ -14,19 +15,35 @@ pub(crate) struct Site<'a> {
     env: Environment<'a>,
     output_directory: PathBuf,
     menu: Menu,
+    context: Option<serde_yaml::Value>,
 }
 
 impl<'a> Site<'a> {
-    pub fn new<P: AsRef<Path>>(vault: &'a Vault, template_dir: P, output_directory: P) -> Self {
+    pub fn new<P: AsRef<Path>>(
+        vault: &'a Vault,
+        template_dir: P,
+        output_directory: P,
+        context_filepath: P,
+    ) -> Result<Self, SiteError> {
         let mut env = Environment::new();
         env.set_loader(path_loader(template_dir));
 
-        Self {
+        let context = {
+            if let Ok(file) = File::open(&context_filepath) {
+                Some(serde_yaml::from_reader(file)?)
+            } else {
+                eprintln!("failed to open {}", &context_filepath.as_ref().display());
+                None
+            }
+        };
+
+        Ok(Self {
             vault,
             env,
             output_directory: output_directory.as_ref().to_path_buf(),
             menu: Site::build_menu(&vault),
-        }
+            context,
+        })
     }
 
     fn render_note_string(&self, path: &NotePath) -> Result<String, SiteRenderError> {
@@ -43,7 +60,8 @@ impl<'a> Site<'a> {
                 path => path,
                 note_html => note.render_html(),
                 menu => self.menu,
-                graph => self.vault.local_graph(path, 2)
+                graph => self.vault.local_graph(path, 2),
+                site => self.context,
             })
             .unwrap();
 
@@ -139,4 +157,10 @@ pub(crate) enum SiteRenderError {
 
     #[error("io error")]
     IOError(#[from] std::io::Error),
+}
+
+#[derive(Error, Debug)]
+pub(crate) enum SiteError {
+    #[error("context error")]
+    InvalidContext(#[from] serde_yaml::Error),
 }

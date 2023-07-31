@@ -1,0 +1,441 @@
+/* || Variables */
+
+:root {
+  --color: #fefefe;
+  --link-color: #fff;
+  --secondary-text-color: #686868;
+  --bg-color: #1e1e20;
+  --border-color: #484848;
+  --sidebar-bg-color: #161618;
+  --gutter-size: 24px;
+  --site-name-height: 68px;
+  --graph-circle-default-color: #ccc;
+  --graph-circle-active-color: #fff;
+  --topnav-height: 68px;
+  --sidebar-width: 80vw;
+}
+
+/* || General styles */
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg-color);
+  color: var(--color);
+  display: flex;
+  height: 100vh;
+  margin: 0;
+}
+
+button {
+  background: none;
+  border: 0;
+  color: var(--link-color);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 150ms ease-in;
+}
+
+button:hover {
+  opacity: 1.0;
+}
+
+div {
+  box-sizing: border-box;
+}
+
+/* || Typography */
+
+body {
+  font: 1rem/1.7rem Roboto, Oxygen, 'Open Sans', 'Helvetica Neue', sans-serif
+}
+
+h1 {
+  margin: 0;
+}
+
+a {
+  color: var(--link-color);
+  opacity: 0.75;
+  text-decoration: none;
+  transition: opacity 150ms ease-in;
+}
+
+a:hover {
+  opacity: 1.0;
+}
+
+.main-content article a {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.main-content article h1,
+.main-content article h2,
+.main-content article h3,
+.main-content article h4,
+.main-content article h5,
+.main-content article h6 {
+  margin: 1.7em 0 0.8em 0;
+}
+
+.main-content article blockquote {
+  border-left: 10px solid var(--border-color);
+  margin: 1.5em 10px;
+  padding: 0.5em 10px;
+  quotes: "\201C""\201D""\2018""\2019";
+}
+
+.main-content article blockquote:before {
+  content: open-quote;
+  font-size: 3rem;
+  line-height: 0.1em;
+  vertical-align: -0.4em;
+}
+
+.main-content article blockquote p:first-child {
+  display: inline;
+}
+
+/* || Utilities */
+
+.hide {
+  display: none;
+}
+
+/* || Layout */
+
+.site-name {  
+  align-items: center;
+  display: flex;
+  min-height: var(--site-name-height);
+}
+
+.site-name h1 {
+  margin: 0 var(--gutter-size);
+}
+
+/* || Layout -> Sidebar */
+
+.sidebar {
+  background: var(--sidebar-bg-color);
+  display: flex;
+  height: 100vh;
+  justify-content: end;
+  max-width: var(--sidebar-width);
+  overflow-wrap: break-word;
+  overflow-y: auto;
+  position: absolute;
+  transform: translate3d(-100%, 0, 0);
+  transition: transform 150ms ease-in-out;
+  z-index: 5000;
+}
+
+.sidebar.show {
+  transform: translate3d(0, 0, 0);
+}
+
+.sidebar-wrapper {
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: break-word;
+  width: 100%;
+}
+
+.sidebar nav {
+  flex-grow: 1;
+}
+
+.sidebar nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar summary {
+  color: var(--link-color);
+  cursor: pointer;
+  opacity: 0.75;  
+  padding: 4px 0 4px var(--gutter-size);
+  transition: opacity 150ms ease-in;
+}
+
+.sidebar details ul {
+  border-left: 1px solid var(--border-color);
+  margin-left: calc(var(--gutter-size) + 4px);
+}
+
+.sidebar nav a {
+  display: block;
+  line-height: 1.25rem;
+  overflow-wrap: break-word;
+  padding: 4px var(--gutter-size);
+  text-decoration: none;
+  transition: opacity 150ms ease-in;
+}
+
+.sidebar summary:hover {
+  opacity: 1;
+}
+
+.sidebar details a {
+  padding-left: 16px;
+}
+
+.sidebar footer {
+  color: var(--secondary-text-color);
+  font-size: 0.9rem;
+  margin-left: var(--gutter-size);
+}
+
+/* || Layout -> Main Area */
+
+.main-area {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+/* || Layout -> Main Area -> Top Navigation */
+
+.topnav {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: var(--topnav-height);
+  padding: 0 var(--gutter-size);
+}
+
+.topnav a {
+  display: inline-block;
+  padding: 8px;
+  text-decoration: none;
+  transition: opacity 150ms ease-in;
+}
+
+/* || Layout -> Actions */
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px var(--gutter-size);
+}
+
+/* || Layout -> Main Area -> Main Content */
+
+.main-content {
+  display: flex;
+}
+
+.main-content article {
+  flex-grow: 1;
+  max-height: calc(100vh - var(--topnav-height) - var(--gutter-size));
+  overflow-y: scroll;
+  padding: 0 var(--gutter-size);
+}
+
+.main-content article header .note-title {
+  font-size: 2.8rem;
+  letter-spacing: -1px;
+  line-height: 0.9em;
+  margin: 4px 0 !important;
+}
+
+/* || Layout -> Main Area -> Right Sidebar */
+
+.right-sidebar {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  left: var(--gutter-size);
+  opacity: 0;
+  padding: 12px var(--gutter-size);
+  pointer-events: none;
+  position: absolute;
+  right: var(--gutter-size);
+  top: 94px;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 100ms ease-in, transform 150ms ease-in;
+}
+
+.right-sidebar.show {
+  display: block;
+  opacity: 1;
+  pointer-events: all;
+  transform: translate3d(0, 10px, 0);
+}
+
+.right-sidebar .section {
+  margin-bottom: var(--gutter-size);
+}
+
+.right-sidebar .section:last-child {
+  margin-bottom: calc(var(--gutter-size) / 2);
+}
+
+.right-sidebar .section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.right-sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.right-sidebar a {
+  letter-spacing: -0.5px;
+}
+
+/* || Layout -> Main Area -> Right Sidebar -> Table of Contents */
+
+.toc ul {
+  margin-left: 8px;
+}
+
+.toc > ul {
+  margin-left: 0;
+}
+
+/* || Network Graph */
+
+.network-graph a {
+  opacity: 1;
+}
+
+.network-graph circle {
+  fill: var(--graph-circle-default-color);
+  stroke-width: 1px;
+  transition: all 200ms ease-in;
+}
+
+.network-graph text {
+  fill: var(--link-color);
+  text-anchor: middle;
+  font-size: 0.9rem;
+  opacity: 0.65;
+  transform: translate3d(0, 4px, 0) scale(100%);
+  transition: all 200ms ease-in;
+}
+
+.network-graph line {
+  stroke: var(--link-color);
+  opacity: 0.35;
+}
+
+.network-graph a.current,
+.network-graph a:hover {
+  z-index: 8000;
+} 
+
+.network-graph a.current circle {
+  fill: var(--graph-circle-active-color);
+}
+
+.network-graph a.current text {
+  transform: translate3d(0, 4px, 0) scale(110%);
+}
+
+.network-graph a:hover circle {
+  fill: var(--graph-circle-active-color);
+  transform: scale(150%);
+}
+
+.network-graph a.current:hover circle {
+  transform: scale(120%);
+}
+
+.network-graph a:hover text {
+  transform: translate3d(0, 8px, 0) scale(120%);
+}
+
+/* || Media Queries */
+
+/* small screens (landspace phones, tablets, ...) */
+@media screen and (min-width: 576px) {
+  :root {
+    --sidebar-width: 260px;
+    --right-sidebar-width: 190px;
+  }
+
+  #toggle-menu {
+    visibility: hidden;
+  }
+
+  .main-area {
+    max-width: calc(100vw - var(--sidebar-width));
+    overflow-wrap: break-word;
+    overflow-y: scroll;
+  }
+
+  .sidebar {
+    position: static;
+    transform: none;
+  }
+
+  .sidebar-wrapper {
+    max-width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+  }
+
+  .right-sidebar {
+    left: auto;
+    max-width: var(--right-sidebar-width);
+    min-width: var(--right-sidebar-width);
+  }
+
+  .main-content article {
+    padding: 0 calc(var(--gutter-size) * 2);
+  }
+}
+
+/* large screens */
+@media screen and (min-width: 1200px) {
+  :root {
+    --sidebar-width: 260px;
+    --main-area-width: 75vw;
+    --right-sidebar-width: 180px;
+  }
+
+  .actions {
+    display: none;
+  }
+
+  .sidebar {
+    display: flex;
+    max-width: calc(((100vw - var(--main-area-width))) - (100vw - (var(--main-area-width) + var(--sidebar-width))) / 2);
+    min-width: calc(((100vw - var(--main-area-width))) - (100vw - (var(--main-area-width) + var(--sidebar-width))) / 2);
+}
+
+  .sidebar-wrapper {
+    max-width: var(--sidebar-width);
+  }
+
+  .main-area {
+    max-width: var(--main-area-width);
+  }
+
+  .right-sidebar {
+    border: 0;
+    border-left: 1px solid var(--border-color);
+    border-radius: 0;
+    opacity: 1;
+    padding: 12px var(--gutter-size);
+    pointer-events: all;
+    position: static;
+  }
+}
+
+@media screen and (min-width: 1400px) {
+  :root {
+    --main-area-width: 1160px;
+  }
+}

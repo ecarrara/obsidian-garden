@@ -1,0 +1,39 @@
+{% macro menu_item(menu, entry) -%}
+{% if menu[entry] == path -%}
+<li class="current">
+  {%- else -%}
+<li>
+  {%- endif %}
+  {% if menu[entry] is mapping -%}
+  <details open>
+    <summary>{{ entry }}</summary>
+    <ul>
+      {% for nested_entry in menu[entry] -%}
+      {{- menu_item(menu[entry], nested_entry) -}}
+      {%- endfor -%}
+    </ul>
+  </details>
+  {% else -%}
+  <a href="/{{ menu[entry] }}.html" title="{{ entry }}">{{ entry }}</a>
+  {%- endif %}
+</li>
+{% endmacro %}
+
+<aside class="sidebar" id="menu">
+  <div class="sidebar-wrapper">
+    <div class="site-name">
+      <h1>{{ site.title | default("Notes") }}</h1>
+    </div>
+    <nav>
+      <ul>
+        {% for entry in menu %}
+        {{- menu_item(menu, entry) -}}
+        {% endfor %}
+      </ul>
+    </nav>
+
+    <footer>
+      <p>Built with <a href="https://github/ecarrara/obsidian-garden">Obsidian Garden</a>.</p>
+    </footer>
+  </div>
+</aside>
