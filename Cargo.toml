@@ -11,6 +11,7 @@ fsync = "0.1.0"
 minijinja = { version = "1.0.5", features = ["json", "loader"] }
 petgraph = { version = "0.6.3", features = ["serde-1"] }
 pulldown-cmark = "0.9.3"
+rust-embed = "6.8.1"
 serde = { version = "1.0.173", features = ["derive"] }
 serde_yaml = "0.9.25"
 thiserror = "1.0.43"
