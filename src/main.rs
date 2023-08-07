@@ -56,8 +56,9 @@ fn main() {
             let vault = vault_builder.build();
             match Site::new(&vault, &template, &output_directory, &context) {
                 Ok(site) => {
+                    println!("Generating pages...");
                     for path in vault.notes.keys() {
-                        println!("{}", path);
+                        println!("  {}", path);
                         site.render_note(path).unwrap();
                     }
 
@@ -69,6 +70,8 @@ fn main() {
                     if let Err(err) = fsync::sync(source_static_dir, target_static_dir) {
                         eprintln!("failed to copy _static directory: {err:?}")
                     }
+
+                    println!("\nOutput directory: {}", &output_directory);
                 }
                 Err(err) => eprintln!("build failed: {err:?}"),
             }
