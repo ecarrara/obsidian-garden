@@ -147,7 +147,7 @@ enum Commands {
         output_directory: String,
 
         /// Template directory.
-        #[arg(long, default_value = "templates/default")]
+        #[arg(long, default_value = ".garden/templates/default")]
         template: String,
 
         /// Only select notes with this tag (can be used multiple times).
