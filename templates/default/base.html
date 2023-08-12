@@ -7,8 +7,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ note.title }} | {{ site.title | default("Notes") }}</title>
   <link rel="stylesheet" type="text/css" href="/_static/style.css">
-  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/stackoverflow-dark.min.css">
-  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+  <link rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"
+    href="https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/prism-a11y-dark.min.css">
+  <noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/prism-coldark-dark.min.css">
+  </noscript>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script defer
+    src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
   {% endblock %}
 </head>
 
@@ -32,7 +38,7 @@
     </div>
 
     <main class="main-content">
-      {% block content %}{% endblock %}
+      {%- block content %}{% endblock -%}
     </main>
   </div>
 
@@ -66,8 +72,6 @@
         rightSidebar.classList.remove("show")
       }
     })
-
-    hljs.highlightAll()
 
     const articleEl = document.getElementById("note-content")
     const tocSectionEl = document.getElementById("toc-section")

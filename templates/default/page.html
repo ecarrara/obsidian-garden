@@ -5,8 +5,7 @@
   <header>
     <h1 class="note-title">{{ note.title }}</h1>
   </header>
-
-  {{ note_html | safe }}
+  {{- note_html | safe }}
 </article>
 
 {% include "aside.html" %}
