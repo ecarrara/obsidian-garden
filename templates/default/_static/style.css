@@ -3,7 +3,7 @@
 :root {
   --color: #fefefe;
   --link-color: #fff;
-  --secondary-text-color: #686868;
+  --secondary-text-color: #999;
   --bg-color: #1e1e20;
   --border-color: #484848;
   --sidebar-bg-color: #161618;
@@ -239,11 +239,88 @@ a:hover {
   padding: 0 var(--gutter-size);
 }
 
-.topnav a {
+.topnav nav a {
   display: inline-block;
   padding: 8px;
   text-decoration: none;
   transition: opacity 150ms ease-in;
+}
+
+.topnav nav {
+  flex-grow: 1;
+  text-align: right;
+}
+
+/* || Layout -> Main Area -> Top Navigation -> Search */
+
+.search-form {
+  background: var(--bg-color);
+  bottom: 0;
+  box-sizing: border-box;
+  left: 0;
+  padding: var(--gutter-size);
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 9500;
+}
+
+.search-form .search-input button {
+  height: 48px;
+  opacity: 1;
+  padding-left: 10px;
+  position: absolute;
+}
+
+.search-form input {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--color);
+  font-size: 1.05rem;
+  padding: 12px 12px 12px 42px;
+  width: 100%;
+}
+
+.search-form input::placeholder {
+  color: var(--secondary-text-color);
+}
+
+.search-form input::-webkit-search-cancel-button {
+  color: var(--link-color);
+}
+
+.search-form input:focus {
+  box-shadow: 0 0 2px var(--link-color);
+  outline: 0;
+}
+
+.search-form ol {
+  list-style: none;
+  margin: 16px 0 0 0;
+  padding: 0;
+}
+
+.search-form ol li {
+  border-bottom: 1px dashed var(--border-color);
+  padding: 12px 0 12px 0;
+}
+
+.search-form ol li a {
+  color: var(--link-color);
+  font-size: 1.1rem;
+  opacity: 1;
+}
+
+.search-form ol li p {
+  color: var(--secondary-text-color);
+  line-height: 1.2em;
+  margin: 4px 0;
+}
+
+.search-form ol li p mark {
+  background: var(--border-color);
+  color: var(--color);
 }
 
 /* || Layout -> Actions */

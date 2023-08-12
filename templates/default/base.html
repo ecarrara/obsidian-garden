@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="{{ site.lang | default('en') }}">
 
 <head>
   {% block head %}
@@ -31,6 +31,9 @@
         {%- endfor %}
         {%- endif -%}
       </nav>
+      {% if site.pagefind %}
+      {% include "search_form.html" %}
+      {% endif %}
     </div>
 
     <div class="actions">

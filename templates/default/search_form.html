@@ -1,0 +1,126 @@
+<button id="open-search" title="Search">
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-search" width="24" height="24"
+    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+    stroke-linejoin="round">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+    <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path>
+    <path d="M21 21l-6 -6"></path>
+  </svg>
+</button>
+
+<form id="search-form" class="search-form hide">
+  <div class="search-input">
+    <button id="close-search" title="Close search">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-arrow-left" width="24" height="24"
+        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+        <path d="M5 12l14 0"></path>
+        <path d="M5 12l6 6"></path>
+        <path d="M5 12l6 -6"></path>
+      </svg>
+    </button>
+    <input type="search" id="search-input" placeholder="Search">
+  </div>
+  <div class="search-drawer">
+    <ol id="search-results">
+    </ol>
+    <p id="search-message"></p>
+  </div>
+</form>
+
+<script type="module">
+  let pagefind // lazy import
+
+  let initializing = false
+
+  const searchFormEl = document.getElementById("search-form")
+  const openSearchEl = document.getElementById("open-search")
+  const closeSearchEl = document.getElementById("close-search")
+  const searchInputEl = document.getElementById("search-input")
+  const searchResultEl = document.getElementById("search-results")
+  const messageEl = document.getElementById("search-message")
+
+  const init = async () => {
+    if (initializing) {
+      return
+    }
+
+    initializing = true
+    pagefind = await import("/_pagefind/pagefind.js")
+  }
+
+  const waitPagefind = async () => {
+    while (!pagefind) {
+      init()
+      await Promive((resolve) => resolve(), 100)
+    }
+  }
+
+  const search = async (q) => {
+    searchResultEl.classList.add("hide")
+    if (!q) {
+      return
+    }
+
+    await waitPagefind()
+
+    const search = await pagefind.debouncedSearch(q)
+
+    if (search === null) {
+      return
+    }
+
+    if (search.results.length === 0) {
+      showMessage("No results found.")
+      return
+    }
+
+    hideMessage()
+    searchResultEl.classList.remove("hide")
+    process(search)
+  }
+
+  const showMessage = (message) => {
+    messageEl.innerText = message
+    messageEl.classList.remove("hide")
+  }
+
+  const hideMessage = () => {
+    messageEl.innerText = ""
+    messageEl.classList.add("hide")
+  }
+
+  const process = async (search) => {
+    const results = await Promise.all(search.results.slice(0, 5).map(result => result.data()))
+
+    const html = []
+    for (const result of results) {
+      html.push(`
+        <li>
+          <a href="${result.url}" title="${result.meta.title}">${result.meta.title}</a>
+          <p>${result.excerpt}</p>
+        </li>`
+      );
+    }
+    searchResultEl.innerHTML = html.join("\n")
+  }
+
+  openSearchEl.addEventListener("click", () => {
+    searchFormEl.classList.remove("hide")
+  })
+
+  closeSearchEl.addEventListener("click", (event) => {
+    searchFormEl.classList.add("hide")
+    event.preventDefault()
+  })
+
+  searchInputEl.addEventListener("focus", init)
+  searchInputEl.addEventListener("keyup", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault()
+    }
+
+    search(searchInputEl.value.trim())
+  })
+</script>
