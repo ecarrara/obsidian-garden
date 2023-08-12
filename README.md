@@ -26,6 +26,7 @@ obsidian-garden init
 
 ```yaml
 title: Site name
+pagefind: false
 topnav:
   links:
     - text: Link 1
@@ -38,4 +39,11 @@ topnav:
 
 ```bash
 obsidian-garden build
+```
+
+4. Optional - Enable pagefind on `.garden/site.yaml` and run
+[pagefind](https://pagefind.app) to index your site
+
+```bash
+pagefind --source dist
 ```
