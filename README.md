@@ -10,7 +10,7 @@ If you are on OS X or Linux, you can use the installation script to fetch the
 latest release:
 
 ```bash
-curl https://raw.githubusercontent.com/ecarrara/obsidian-garden/main/install.toml | sh
+curl https://raw.githubusercontent.com/ecarrara/obsidian-garden/main/install.sh | sh
 ```
 
 ## Getting Started
