@@ -8,7 +8,7 @@ use minijinja::{context, path_loader, Environment};
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::vault::{NotePath, Vault};
+use crate::vault::{EmbeddedFile, ItemPath, Vault};
 
 pub(crate) struct Site<'a> {
     vault: &'a Vault,
@@ -48,7 +48,7 @@ impl<'a> Site<'a> {
         })
     }
 
-    fn render_note_string(&self, path: &NotePath) -> Result<String, SiteRenderError> {
+    fn render_note_string(&self, path: &ItemPath) -> Result<String, SiteRenderError> {
         let note = self
             .vault
             .get_note(path)
@@ -68,7 +68,35 @@ impl<'a> Site<'a> {
             .unwrap();
 
         for wikilink in note.links.iter() {
-            if let Some(note_path) = self.vault.resolve_link(&wikilink.target) {
+            if wikilink.embedded {
+                let (target, fragment) = wikilink
+                    .target
+                    .split_once('#')
+                    .unwrap_or((&wikilink.target, ""));
+
+                if let Some((item_path, embedded_file)) = self.vault.resolve_embedded_link(target) {
+                    println!("resolved file: {}", item_path);
+
+                    let embedded_html = embedded_file_html(embedded_file, &item_path, fragment);
+                    html = html.replace(&format!("{wikilink}"), &embedded_html);
+
+                    let path: PathBuf = item_path.into();
+                    let mut source = self.vault.root.clone();
+                    source.push(&path);
+
+                    let mut target = self.output_directory.clone();
+                    target.push(&path);
+
+                    if let Some(parent) = target.parent() {
+                        if !parent.exists() {
+                            std::fs::create_dir_all(parent)?;
+                        }
+                    }
+
+                    println!("copying {} -> {}", source.display(), target.display());
+                    std::fs::copy(source, target)?;
+                }
+            } else if let Some(note_path) = self.vault.resolve_link(&wikilink.target) {
                 let label = wikilink.label.as_ref().unwrap_or(&wikilink.target);
                 let href = format!("/{}.html", &note_path);
                 let a_tag =
@@ -80,7 +108,7 @@ impl<'a> Site<'a> {
         Ok(html)
     }
 
-    pub fn render_note(&self, path: &NotePath) -> Result<(), SiteRenderError> {
+    pub fn render_note(&self, path: &ItemPath) -> Result<(), SiteRenderError> {
         let html = self.render_note_string(path)?;
 
         let filename = format!("{}.html", path);
@@ -93,7 +121,7 @@ impl<'a> Site<'a> {
     }
 
     fn build_menu(vault: &Vault) -> Menu {
-        let mut paths: Vec<NotePath> = vault.notes.keys().cloned().collect();
+        let mut paths: Vec<ItemPath> = vault.notes.keys().cloned().collect();
         paths.sort();
 
         let mut menu: Menu = Menu::new();
@@ -106,7 +134,7 @@ impl<'a> Site<'a> {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct Menu {
     #[serde(flatten)]
     items: HashMap<String, MenuItem>,
@@ -119,8 +147,8 @@ impl Menu {
         }
     }
 
-    fn add_path(&mut self, path: &NotePath) {
-        if let NotePath::Absolute(components) = path {
+    fn add_path(&mut self, path: &ItemPath) {
+        if let ItemPath::Absolute(components) = path {
             let mut current_menu = self;
             for component in &components[..components.len() - 1] {
                 let menu = current_menu
@@ -142,10 +170,10 @@ impl Menu {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(untagged)]
 enum MenuItem {
-    Page(NotePath),
+    Page(ItemPath),
     Folder(Menu),
 }
 
@@ -165,4 +193,59 @@ pub(crate) enum SiteRenderError {
 pub(crate) enum SiteError {
     #[error("context error")]
     InvalidContext(#[from] serde_yaml::Error),
+}
+
+fn embedded_file_html(file: &EmbeddedFile, path: &ItemPath, fragment: &str) -> String {
+    match file {
+        EmbeddedFile::Image(_) => format!(r#"<img src="{}">"#, path),
+        EmbeddedFile::Audio(_) => format!(r#"<audio src="{}" controls></audio>"#, path),
+        EmbeddedFile::Video(_) => format!(r#"<video src="{}" controls></video>"#, path),
+        EmbeddedFile::Pdf(_) => {
+            format!(
+                r#"<iframe src="{}#{}" frameborder="0"></iframe>"#,
+                path, fragment
+            )
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::embedded_file_html;
+    use crate::vault::{EmbeddedFile, ItemPath};
+
+    #[test]
+    fn embedded_file_image_html() {
+        let file = EmbeddedFile::Image("./files/image.webp".into());
+        let html = embedded_file_html(&file, &ItemPath::from_path("./files/image.webp"), "");
+        assert_eq!(html, r#"<img src="./files/image.webp">"#);
+    }
+
+    #[test]
+    fn embedded_file_audio_html() {
+        let file = EmbeddedFile::Audio("./files/audio.ogg".into());
+        let html = embedded_file_html(&file, &ItemPath::from_path("./files/audio.ogg"), "");
+        assert_eq!(html, r#"<audio src="./files/audio.ogg" controls></audio>"#);
+    }
+
+    #[test]
+    fn embedded_file_video_html() {
+        let file = EmbeddedFile::Video("./files/video.ogv".into());
+        let html = embedded_file_html(&file, &ItemPath::from_path("./files/video.ogv"), "");
+        assert_eq!(html, r#"<video src="./files/video.ogv" controls></video>"#);
+    }
+
+    #[test]
+    fn embedded_file_pdf_html() {
+        let file = EmbeddedFile::Pdf("./files/document.pdf".into());
+        let html = embedded_file_html(
+            &file,
+            &ItemPath::from_path("./files/document.pdf"),
+            "page=1",
+        );
+        assert_eq!(
+            html,
+            r#"<iframe src="./files/document.pdf#page=1" frameborder="0"></iframe>"#
+        );
+    }
 }
