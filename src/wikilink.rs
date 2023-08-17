@@ -6,6 +6,7 @@ use std::fmt::Display;
 pub struct Wikilink {
     pub target: String,
     pub label: Option<String>,
+    pub embedded: bool,
 }
 
 impl Wikilink {
@@ -13,15 +14,28 @@ impl Wikilink {
         Wikilink {
             target: target.into(),
             label: label.map(|s| s.into()),
+            embedded: false,
+        }
+    }
+
+    pub fn embedded<S: Into<String>>(target: S) -> Wikilink {
+        Wikilink {
+            target: target.into(),
+            label: None,
+            embedded: true,
         }
     }
 }
 
 impl Display for Wikilink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.label {
-            Some(text) => f.write_fmt(format_args!("[[{}|{}]]", self.target, &text)),
-            None => f.write_fmt(format_args!("[[{}]]", self.target)),
+        if self.embedded {
+            f.write_fmt(format_args!("![[{}]]", self.target))
+        } else {
+            match &self.label {
+                Some(text) => f.write_fmt(format_args!("[[{}|{}]]", self.target, &text)),
+                None => f.write_fmt(format_args!("[[{}]]", self.target)),
+            }
         }
     }
 }
@@ -29,6 +43,7 @@ impl Display for Wikilink {
 pub struct WikilinkParser {
     state: WikilinkParserState,
     current_value: Option<Wikilink>,
+    embedded: bool,
 }
 
 impl Default for WikilinkParser {
@@ -42,11 +57,17 @@ impl WikilinkParser {
         Self {
             state: WikilinkParserState::Start,
             current_value: None,
+            embedded: false,
         }
     }
 
     pub fn feed(&mut self, text: &CowStr) -> Option<Wikilink> {
         match (&self.state, text) {
+            (WikilinkParserState::Start, CowStr::Borrowed("![")) => {
+                self.transit_state(WikilinkParserState::FirstOpen);
+                self.embedded = true;
+                None
+            }
             (WikilinkParserState::Start, CowStr::Borrowed("[")) => {
                 self.transit_state(WikilinkParserState::FirstOpen);
                 None
@@ -56,7 +77,11 @@ impl WikilinkParser {
                 None
             }
             (WikilinkParserState::SecondOpen, text) => {
-                let wikilink = parse_wikilink_text(text);
+                let wikilink = if !self.embedded {
+                    parse_wikilink_text(text)
+                } else {
+                    Wikilink::embedded(text.to_string())
+                };
                 self.current_value = Some(wikilink);
                 self.transit_state(WikilinkParserState::Text);
                 None
@@ -138,5 +163,18 @@ mod tests {
         assert_eq!(parser.feed(&CowStr::Borrowed("]")), None,);
         assert_eq!(parser.feed(&CowStr::Borrowed(" Oops")), None);
         assert!(matches!(parser.state, WikilinkParserState::Start));
+    }
+
+    #[test]
+    fn test_parse_wikilink_embed() {
+        let mut parser = WikilinkParser::new();
+        assert_eq!(parser.feed(&CowStr::Borrowed("![")), None);
+        assert_eq!(parser.feed(&CowStr::Borrowed("[")), None);
+        assert_eq!(parser.feed(&CowStr::Borrowed("test.webp")), None);
+        assert_eq!(parser.feed(&CowStr::Borrowed("]")), None);
+        assert_eq!(
+            parser.feed(&CowStr::Borrowed("]")),
+            Some(Wikilink::embedded("test.webp"))
+        );
     }
 }

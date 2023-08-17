@@ -3,7 +3,6 @@ use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fmt::Display,
-    os::unix::prelude::OsStrExt,
     path::{Path, PathBuf},
 };
 use walkdir::WalkDir;
@@ -23,9 +22,18 @@ impl VaultBuilder {
         }
     }
 
-    pub fn build(&self) -> Vault {
-        let mut notes: HashMap<NotePath, NoteItem> = HashMap::new();
+    pub fn build(self) -> Vault {
+        let mut notes: HashMap<ItemPath, NoteItem> = HashMap::new();
         let mut graph = StableGraph::new();
+        let mut files: HashMap<ItemPath, EmbeddedFile> = HashMap::new();
+
+        const MARKDOWN_FILE_EXTENSIONS: &[&str] = &[".md"];
+        const IMAGE_FILE_EXTENSIONS: &[&str] =
+            &[".png", ".webp", ".jpg", ".jpeg", ".gif", ".bmp", ".svg"];
+        const AUDIO_FILE_EXTENSIONS: &[&str] =
+            &[".mp3", ".webm", ".wav", ".m4a", ".ogg", ".3gp", ".flac"];
+        const VIDEO_FILE_EXTENSIONS: &[&str] = &[".mp4", ".webm", ".ogv", ".mov", ".mkv"];
+        const PDF_FILE_EXTENSIONS: &[&str] = &[".pdf"];
 
         for result in WalkDir::new(&self.directory) {
             match result {
@@ -34,26 +42,54 @@ impl VaultBuilder {
                         continue;
                     }
 
-                    if !entry.file_name().as_bytes().ends_with(b".md") {
-                        continue;
-                    }
+                    let filename = entry.file_name();
 
-                    match Note::from_file(&entry.path()) {
-                        Ok(note) => {
-                            if let Some(tags) = &self.tags {
-                                if !note.tags.iter().any(|t| tags.contains(t)) {
-                                    continue;
+                    // path relative to vault root directory
+                    let relative_path = entry.path().strip_prefix(&self.directory).unwrap();
+
+                    if MARKDOWN_FILE_EXTENSIONS
+                        .iter()
+                        .any(|ext| filename.to_string_lossy().ends_with(ext))
+                    {
+                        match Note::from_file(&entry.path()) {
+                            Ok(note) => {
+                                if let Some(tags) = &self.tags {
+                                    if !note.tags.iter().any(|t| tags.contains(t)) {
+                                        continue;
+                                    }
                                 }
+                                let note_path = ItemPath::from_path_without_ext(relative_path);
+                                let index = graph.add_node(note_path.clone());
+                                notes.insert(note_path, NoteItem { index, note });
                             }
-
-                            let note_path =
-                                NotePath::from(entry.path().strip_prefix(&self.directory).unwrap());
-                            let index = graph.add_node(note_path.clone());
-                            notes.insert(note_path, NoteItem { index, note });
+                            Err(err) => {
+                                eprintln!("Unable to parse {}: {}", entry.path().display(), err)
+                            }
                         }
-                        Err(err) => {
-                            eprintln!("Unable to parse {}: {}", entry.path().display(), err)
-                        }
+                    } else if IMAGE_FILE_EXTENSIONS
+                        .iter()
+                        .any(|ext| filename.to_string_lossy().ends_with(ext))
+                    {
+                        let item_path = ItemPath::from_path(relative_path);
+                        files.insert(item_path, EmbeddedFile::Image(entry.path().to_path_buf()));
+                    } else if AUDIO_FILE_EXTENSIONS
+                        .iter()
+                        .any(|ext| filename.to_string_lossy().ends_with(ext))
+                    {
+                        let item_path = ItemPath::from_path(relative_path);
+                        files.insert(item_path, EmbeddedFile::Audio(entry.path().to_path_buf()));
+                    } else if VIDEO_FILE_EXTENSIONS
+                        .iter()
+                        .any(|ext| filename.to_string_lossy().ends_with(ext))
+                    {
+                        let item_path = ItemPath::from_path(relative_path);
+                        files.insert(item_path, EmbeddedFile::Video(entry.path().to_path_buf()));
+                    } else if PDF_FILE_EXTENSIONS
+                        .iter()
+                        .any(|ext| filename.to_string_lossy().ends_with(ext))
+                    {
+                        let item_path = ItemPath::from_path(relative_path);
+                        files.insert(item_path, EmbeddedFile::Pdf(entry.path().to_path_buf()));
                     }
                 }
                 Err(err) => eprintln!("{}", err),
@@ -62,13 +98,18 @@ impl VaultBuilder {
 
         for item in notes.values() {
             for link in item.note.links.iter() {
-                if let Some(found) = resolve_link(&notes, &link.target) {
+                if let Some((found, _)) = resolve_link(&notes, &link.target) {
                     graph.add_edge(item.index, notes[&found].index, ());
                 }
             }
         }
 
-        Vault { notes, graph }
+        Vault {
+            notes,
+            graph,
+            files,
+            root: self.directory,
+        }
     }
 
     pub(crate) fn filter_tags(&mut self, tags: Vec<String>) -> &mut Self {
@@ -78,24 +119,26 @@ impl VaultBuilder {
 }
 
 pub(crate) struct Vault {
-    pub notes: HashMap<NotePath, NoteItem>,
-    graph: StableGraph<NotePath, ()>,
+    pub notes: HashMap<ItemPath, NoteItem>,
+    graph: StableGraph<ItemPath, ()>,
+    pub(crate) root: PathBuf,
+    pub(crate) files: HashMap<ItemPath, EmbeddedFile>,
 }
 
 impl Vault {
-    pub(crate) fn get_note(&self, note_path: &NotePath) -> Option<&Note> {
+    pub(crate) fn get_note(&self, note_path: &ItemPath) -> Option<&Note> {
         self.notes.get(note_path).map(|item| &item.note)
     }
 
     pub(crate) fn local_graph(
         &self,
-        path: &NotePath,
+        path: &ItemPath,
         max_depth: usize,
-    ) -> Option<StableGraph<NotePath, ()>> {
+    ) -> Option<StableGraph<ItemPath, ()>> {
         let mut depth = 0;
         let mut stack = VecDeque::new();
-        let mut discovered: HashSet<NotePath> = HashSet::new();
-        let mut path_indexes: HashMap<NotePath, NodeIndex> = HashMap::new();
+        let mut discovered: HashSet<ItemPath> = HashSet::new();
+        let mut path_indexes: HashMap<ItemPath, NodeIndex> = HashMap::new();
 
         stack.push_back(path.clone());
 
@@ -129,8 +172,16 @@ impl Vault {
         Some(g)
     }
 
-    pub(crate) fn resolve_link<S: Into<String>>(&self, target: S) -> Option<NotePath> {
-        resolve_link(&self.notes, target)
+    pub(crate) fn resolve_link<S: Into<String>>(&self, target: S) -> Option<ItemPath> {
+        let (item_path, _) = resolve_link(&self.notes, target)?;
+        Some(item_path)
+    }
+
+    pub(crate) fn resolve_embedded_link<S: Into<String>>(
+        &self,
+        target: S,
+    ) -> Option<(ItemPath, &EmbeddedFile)> {
+        resolve_link(&self.files, target)
     }
 }
 
@@ -141,77 +192,90 @@ pub(crate) struct NoteItem {
 }
 
 #[derive(Hash, Eq, PartialEq, PartialOrd, Ord, Debug, Clone)]
-pub(crate) enum NotePath {
+pub(crate) enum ItemPath {
     Absolute(Vec<String>),
     FileName(String),
 }
 
-impl Serialize for NotePath {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            NotePath::Absolute(components) => serializer.serialize_str(&components.join("/")),
-            NotePath::FileName(filename) => serializer.serialize_str(filename),
-        }
+impl ItemPath {
+    pub(crate) fn from_path<P: AsRef<Path>>(path: P) -> Self {
+        let path: &Path = path.as_ref();
+        let parts = path
+            .components()
+            .map(|component| component.as_os_str().to_string_lossy().to_string())
+            .collect::<Vec<String>>();
+        ItemPath::Absolute(parts)
     }
-}
 
-impl Display for NotePath {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            NotePath::Absolute(components) => f.write_str(&components.join("/")),
-            NotePath::FileName(filename) => f.write_str(filename),
-        }
-    }
-}
-
-impl From<&Path> for NotePath {
-    fn from(value: &Path) -> Self {
-        let mut path = value
+    pub(crate) fn from_path_without_ext<P: AsRef<Path>>(path: P) -> Self {
+        let path: &Path = path.as_ref();
+        let mut parts = path
             .parent()
             .expect("note path parent")
             .components()
             .map(|component| component.as_os_str().to_string_lossy().to_string())
             .collect::<Vec<String>>();
 
-        let title = value.file_stem().unwrap().to_string_lossy().to_string();
-        path.push(title);
+        let title = path.file_stem().unwrap().to_string_lossy().to_string();
+        parts.push(title);
 
-        NotePath::Absolute(path)
+        ItemPath::Absolute(parts)
     }
 }
 
-impl From<String> for NotePath {
+impl From<ItemPath> for PathBuf {
+    fn from(val: ItemPath) -> Self {
+        match val {
+            ItemPath::Absolute(components) => PathBuf::from(&components.join("/")),
+            ItemPath::FileName(filename) => PathBuf::from(filename.clone()),
+        }
+    }
+}
+
+impl Serialize for ItemPath {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            ItemPath::Absolute(components) => serializer.serialize_str(&components.join("/")),
+            ItemPath::FileName(filename) => serializer.serialize_str(filename),
+        }
+    }
+}
+
+impl Display for ItemPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ItemPath::Absolute(components) => f.write_str(&components.join("/")),
+            ItemPath::FileName(filename) => f.write_str(filename),
+        }
+    }
+}
+
+impl From<String> for ItemPath {
     fn from(value: String) -> Self {
         if value.contains('/') {
-            NotePath::Absolute(value.split('/').map(|v| v.to_string()).collect())
+            ItemPath::Absolute(value.split('/').map(|v| v.to_string()).collect())
         } else {
-            NotePath::FileName(value)
+            ItemPath::FileName(value)
         }
     }
 }
 
-pub(crate) fn resolve_link<S: Into<String>>(
-    notes: &HashMap<NotePath, NoteItem>,
+pub(crate) fn resolve_link<S: Into<String>, V>(
+    paths: &HashMap<ItemPath, V>,
     target: S,
-) -> Option<NotePath> {
-    let target = NotePath::from(target.into());
+) -> Option<(ItemPath, &V)> {
+    let target = ItemPath::from(target.into());
     match target {
-        NotePath::Absolute(_) => {
-            if notes.contains_key(&target) {
-                Some(target)
-            } else {
-                None
-            }
-        }
-        NotePath::FileName(filename) => {
-            for path in notes.keys() {
-                if let NotePath::Absolute(components) = path {
+        ItemPath::Absolute(_) => paths.get(&target).map(|value| (target, value)),
+        ItemPath::FileName(filename) => {
+            for (path, value) in paths.iter() {
+                if let ItemPath::Absolute(components) = path {
                     if let Some(item_filename) = components.last() {
                         if *item_filename == filename {
-                            return Some(path.clone());
+                            return Some((path.clone(), value));
                         }
                     }
                 }
@@ -219,4 +283,11 @@ pub(crate) fn resolve_link<S: Into<String>>(
             None
         }
     }
+}
+
+pub(crate) enum EmbeddedFile {
+    Image(PathBuf),
+    Audio(PathBuf),
+    Video(PathBuf),
+    Pdf(PathBuf),
 }
