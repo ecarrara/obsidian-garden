@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+set -u
 
 PROGRAM_NAME=obsidian-garden
 BASE_URL=https://github.com/ecarrara/obsidian-garden/releases/latest/download
@@ -28,7 +28,7 @@ download () {
 
   if exists curl; then
     cmd="curl --silent --fail --location --output $destination $url"
-  elif has wget; then
+  elif exists wget; then
     cmd="wget --quiet --output-document $destination $url"
   else
     message error "Unable to found curl or wget, exiting..."
@@ -37,6 +37,12 @@ download () {
 
   message info "Downloading $url to $destination"
   $sudo $cmd
+
+  if [[ "$?" -ne 0 ]]; then
+    message error "Download failed."
+    message warning "Only Linux x86_64 and MacOS are supported."
+    exit -1
+  fi
 }
 
 detect_platform () {
@@ -65,7 +71,7 @@ if [ -z "${INSTALL_DIR-}" ]; then
   INSTALL_DIR=/usr/local/bin
 fi
 
-URL=${BASE_URL}/${PROGRAM_NAME}-${PLATFORM}-${ARCH}
+URL=${BASE_URL}/${PROGRAM_NAME}-${ARCH}-${PLATFORM}
 TARGET=${INSTALL_DIR}/${PROGRAM_NAME}
 
 if [ -w "$INSTALL_DIR" ]; then
