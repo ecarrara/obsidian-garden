@@ -44,6 +44,7 @@ fn main() {
         Commands::Build {
             vault,
             output_directory,
+            base_url,
             template,
             tag,
             config: context,
@@ -54,7 +55,7 @@ fn main() {
             }
 
             let vault = vault_builder.build();
-            match Site::new(&vault, &template, &output_directory, &context) {
+            match Site::new(&vault, &template, &output_directory, base_url, &context) {
                 Ok(site) => {
                     println!("Generating pages...");
                     for path in vault.notes.keys() {
@@ -145,6 +146,10 @@ enum Commands {
         /// Output directory.
         #[arg(default_value = "./dist")]
         output_directory: String,
+
+        /// Base URL.
+        #[arg(long, default_value = "/")]
+        base_url: String,
 
         /// Template directory.
         #[arg(long, default_value = ".garden/templates/default")]

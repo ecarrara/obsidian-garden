@@ -6,7 +6,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ note.title }} | {{ site.title | default("Notes") }}</title>
-  <link rel="stylesheet" type="text/css" href="/_static/style.css">
+  <link rel="stylesheet" type="text/css" href="{{ base_url | safe }}_static/style.css">
   <link rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'"
     href="https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/prism-a11y-dark.min.css">
   <noscript>
@@ -46,7 +46,7 @@
   </div>
 
   <script type="module">
-    import {initGraph, toc} from "/_static/script.js"
+    import {initGraph, toc} from "{{ base_url | safe }}_static/script.js"
     const currentPath = {{path | tojson | safe}}
     const graph = {{graph | tojson | safe}}
 
