@@ -1,6 +1,9 @@
 name: release
 
 on:
+  push:
+    branches:
+      - release-static-binaries
   release:
     types: [published]
 
@@ -12,24 +15,35 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: obsidian-garden
-            asset_name: obsidian-garden-linux-amd64
+            target: x86_64-unknown-linux-musl
           - os: macos-latest
-            artifact_name: obsidian-garden
-            asset_name: obsidian-garden-macos-amd64
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
 
     steps:
     - uses: actions/checkout@v3
 
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+
+    - name: Install cargo-rs
+      shell: bash
+      run: |
+        cargo install cross
+
     - name: Build
-      run: cargo build --release
+      run: cross build --target ${{ matrix.target }} --release
 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: target/release/${{ matrix.artifact_name }}
-        asset_name: ${{ matrix.asset_name }}
+        file: target/${{ matrix.target }}/release/obsidian-garden
+        asset_name: obsidian-garden-${{ matrix.target}}
         tag: ${{ github.ref }}
 
   release-default-template:
