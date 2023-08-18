@@ -148,7 +148,7 @@ enum Commands {
         output_directory: String,
 
         /// Base URL.
-        #[arg(default_value = "/")]
+        #[arg(long, default_value = "/")]
         base_url: String,
 
         /// Template directory.
