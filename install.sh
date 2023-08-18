@@ -76,9 +76,11 @@ TARGET=${INSTALL_DIR}/${PROGRAM_NAME}
 
 if [ -w "$INSTALL_DIR" ]; then
   download $URL $TARGET
+  chmod +x $TARGET
 else
   message warning "$INSTALL_DIR is not writable, sudo is required."
   download $URL $TARGET sudo
+  sudo chmod +x $TARGET
 fi
 
 message success "$PROGRAM_NAME installed."
