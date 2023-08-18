@@ -14,6 +14,7 @@ pub(crate) struct Site<'a> {
     vault: &'a Vault,
     env: Environment<'a>,
     output_directory: PathBuf,
+    base_url: String,
     menu: Menu,
     context: Option<serde_yaml::Value>,
 }
@@ -23,6 +24,7 @@ impl<'a> Site<'a> {
         vault: &'a Vault,
         template_dir: P,
         output_directory: P,
+        base_url: String,
         context_filepath: P,
     ) -> Result<Self, SiteError> {
         let mut env = Environment::new();
@@ -43,6 +45,7 @@ impl<'a> Site<'a> {
             vault,
             env,
             output_directory: output_directory.as_ref().to_path_buf(),
+            base_url,
             context,
             menu,
         })
@@ -58,6 +61,7 @@ impl<'a> Site<'a> {
 
         let mut html = page_tmpl
             .render(context! {
+                base_url => self.base_url,
                 note => note,
                 path => path,
                 note_html => note.render_html(),
@@ -77,7 +81,9 @@ impl<'a> Site<'a> {
                 if let Some((item_path, embedded_file)) = self.vault.resolve_embedded_link(target) {
                     println!("resolved file: {}", item_path);
 
-                    let embedded_html = embedded_file_html(embedded_file, &item_path, fragment);
+                    let url = format!("{}{}", &self.base_url, &item_path);
+
+                    let embedded_html = embedded_file_html(embedded_file, &url, fragment);
                     html = html.replace(&format!("{wikilink}"), &embedded_html);
 
                     let path: PathBuf = item_path.into();
@@ -195,15 +201,15 @@ pub(crate) enum SiteError {
     InvalidContext(#[from] serde_yaml::Error),
 }
 
-fn embedded_file_html(file: &EmbeddedFile, path: &ItemPath, fragment: &str) -> String {
+fn embedded_file_html(file: &EmbeddedFile, url: &str, fragment: &str) -> String {
     match file {
-        EmbeddedFile::Image(_) => format!(r#"<img src="{}">"#, path),
-        EmbeddedFile::Audio(_) => format!(r#"<audio src="{}" controls></audio>"#, path),
-        EmbeddedFile::Video(_) => format!(r#"<video src="{}" controls></video>"#, path),
+        EmbeddedFile::Image(_) => format!(r#"<img src="{}">"#, url),
+        EmbeddedFile::Audio(_) => format!(r#"<audio src="{}" controls></audio>"#, url),
+        EmbeddedFile::Video(_) => format!(r#"<video src="{}" controls></video>"#, url),
         EmbeddedFile::Pdf(_) => {
             format!(
                 r#"<iframe src="{}#{}" frameborder="0"></iframe>"#,
-                path, fragment
+                url, fragment
             )
         }
     }
@@ -212,37 +218,33 @@ fn embedded_file_html(file: &EmbeddedFile, path: &ItemPath, fragment: &str) -> S
 #[cfg(test)]
 mod tests {
     use super::embedded_file_html;
-    use crate::vault::{EmbeddedFile, ItemPath};
+    use crate::vault::EmbeddedFile;
 
     #[test]
     fn embedded_file_image_html() {
         let file = EmbeddedFile::Image("./files/image.webp".into());
-        let html = embedded_file_html(&file, &ItemPath::from_path("./files/image.webp"), "");
+        let html = embedded_file_html(&file, "./files/image.webp", "");
         assert_eq!(html, r#"<img src="./files/image.webp">"#);
     }
 
     #[test]
     fn embedded_file_audio_html() {
         let file = EmbeddedFile::Audio("./files/audio.ogg".into());
-        let html = embedded_file_html(&file, &ItemPath::from_path("./files/audio.ogg"), "");
+        let html = embedded_file_html(&file, "./files/audio.ogg", "");
         assert_eq!(html, r#"<audio src="./files/audio.ogg" controls></audio>"#);
     }
 
     #[test]
     fn embedded_file_video_html() {
         let file = EmbeddedFile::Video("./files/video.ogv".into());
-        let html = embedded_file_html(&file, &ItemPath::from_path("./files/video.ogv"), "");
+        let html = embedded_file_html(&file, "./files/video.ogv", "");
         assert_eq!(html, r#"<video src="./files/video.ogv" controls></video>"#);
     }
 
     #[test]
     fn embedded_file_pdf_html() {
         let file = EmbeddedFile::Pdf("./files/document.pdf".into());
-        let html = embedded_file_html(
-            &file,
-            &ItemPath::from_path("./files/document.pdf"),
-            "page=1",
-        );
+        let html = embedded_file_html(&file, "./files/document.pdf", "page=1");
         assert_eq!(
             html,
             r#"<iframe src="./files/document.pdf#page=1" frameborder="0"></iframe>"#
