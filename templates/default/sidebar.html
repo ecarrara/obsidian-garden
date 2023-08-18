@@ -14,7 +14,7 @@
     </ul>
   </details>
   {% else -%}
-  <a href="/{{ menu[entry] }}.html" title="{{ entry }}">{{ entry }}</a>
+  <a href="{{ base_url | safe }}{{ menu[entry] }}.html" title="{{ entry }}">{{ entry }}</a>
   {%- endif %}
 </li>
 {% endmacro %}
