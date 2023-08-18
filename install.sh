@@ -42,8 +42,8 @@ download () {
 detect_platform () {
   platform=$(uname -s | tr '[:upper:]' '[:lower:]')
   case "$platform" in
-    linux) platform="linux" ;;
-    darwin) platform="macos" ;;
+    linux) platform="unknown-linux-musl" ;;
+    darwin) platform="apple-darwin" ;;
   esac
   echo -n "$platform"
 }
@@ -51,7 +51,8 @@ detect_platform () {
 detect_arch () {
   arch=$(uname -m | tr '[:upper:]' '[:lower:]')
   case "$arch" in
-    x86_64) arch="amd64" ;;
+    amd64) arch="x86_64" ;;
+    arm64) arch="aarch64" ;;
   esac
   echo -n "$arch"
 }

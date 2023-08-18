@@ -16,3 +16,7 @@ serde = { version = "1.0.173", features = ["derive"] }
 serde_yaml = "0.9.25"
 thiserror = "1.0.43"
 walkdir = "2.3.3"
+
+[profile.release]
+strip = true
+lto = true
