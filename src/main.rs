@@ -83,6 +83,7 @@ fn main() {
 fn initialize_config<P: AsRef<Path>>(config_dir: P) -> Result<(), std::io::Error> {
     let default_config = r#"---
 title: Site name
+katex: true
 topnav:
   links:
     - text: Link 1
