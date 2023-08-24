@@ -13,6 +13,14 @@ latest release:
 curl https://raw.githubusercontent.com/ecarrara/obsidian-garden/main/install.sh | sh
 ```
 
+## Features
+
+- [x] Generate fully static HTML files - SEO friendly and easy to deploy
+- [x] Full-text search with [pagefind](https://pagefind.app/)
+- [x] Math expressions with [KaTeX](https://katex.org/)
+- [x] Table of contents
+- [ ] Excalidraw support
+
 ## Getting Started
 
 1. Navigate to you Vault folder and run `obsidian-garden init`
