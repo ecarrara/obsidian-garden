@@ -61,17 +61,14 @@ impl VaultBuilder {
                                     }
                                 }
 
-                                if self.whitelist_mode {
-                                    let publish = note.metadata.get("publish");
-                                    match publish {
-                                        Some(publish) => {
-                                            if let MetadataValue::Boolean(publish) = publish {
-                                                if !publish {
-                                                    continue;
-                                                }
-                                            }
-                                        }
-                                        None => continue,
+                                                                if self.whitelist_mode {
+                                    let publish = note
+                                        .metadata
+                                        .get("publish")
+                                        .map_or(Some(false), |value| value.as_bool())
+                                        .unwrap_or(false);
+                                    if !publish {
+                                        continue;
                                     }
                                 }
 
