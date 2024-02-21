@@ -7,11 +7,12 @@ use std::{
 };
 use walkdir::WalkDir;
 
-use crate::note::Note;
+use crate::{note::Note, metadata::MetadataValue};
 
 pub(crate) struct VaultBuilder {
     pub directory: PathBuf,
     tags: Option<Vec<String>>,
+    whitelist_mode: bool,
 }
 
 impl VaultBuilder {
@@ -19,6 +20,7 @@ impl VaultBuilder {
         Self {
             directory: directory.as_ref().to_path_buf(),
             tags: None,
+            whitelist_mode: false,
         }
     }
 
@@ -58,6 +60,18 @@ impl VaultBuilder {
                                         continue;
                                     }
                                 }
+
+                                                                if self.whitelist_mode {
+                                    let publish = note
+                                        .metadata
+                                        .get("publish")
+                                        .map_or(Some(false), |value| value.as_bool())
+                                        .unwrap_or(false);
+                                    if !publish {
+                                        continue;
+                                    }
+                                }
+
                                 let note_path = ItemPath::from_path_without_ext(relative_path);
                                 let index = graph.add_node(note_path.clone());
                                 notes.insert(note_path, NoteItem { index, note });
@@ -114,6 +128,11 @@ impl VaultBuilder {
 
     pub(crate) fn filter_tags(&mut self, tags: Vec<String>) -> &mut Self {
         self.tags = Some(tags);
+        self
+    }
+
+    pub(crate) fn whitelist_mode(&mut self) -> &mut Self {
+        self.whitelist_mode = true;
         self
     }
 }

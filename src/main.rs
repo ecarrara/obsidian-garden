@@ -48,10 +48,14 @@ fn main() {
             template,
             tag,
             config: context,
+            whitelist_mode,
         } => {
             let mut vault_builder = VaultBuilder::new(&vault);
             if let Some(tags) = tag {
                 vault_builder.filter_tags(tags);
+            }
+            if whitelist_mode {
+                vault_builder.whitelist_mode();
             }
 
             let vault = vault_builder.build();
@@ -159,6 +163,10 @@ enum Commands {
         /// Only select notes with this tag (can be used multiple times).
         #[arg(short, long)]
         tag: Option<Vec<String>>,
+
+        /// Only publish notes that have the `publish: true` metadata.
+        #[arg(long)]
+        whitelist_mode: bool,
 
         #[arg(long, default_value = ".garden/site.yaml")]
         config: String,

@@ -27,6 +27,10 @@ impl Metadata {
 
         tags
     }
+
+    pub fn get(&self, key: &str) -> Option<&MetadataValue> {
+        self.inner.get(key)
+    }
 }
 
 impl From<HashMap<String, MetadataValue>> for Metadata {
